@@ -9,12 +9,42 @@ from sklearn.metrics import (
     f1_score, roc_auc_score, matthews_corrcoef,
     confusion_matrix, classification_report
 )
+
+from sklearn.neighbors import KNeighborsClassifier
+
+# ---------------- PAGE TITLE ----------------
+st.set_page_config(page_title="Adult Income Prediction", layout="wide")
+st.title("💰 Adult Income Classification App")
+st.write("Upload raw test CSV (unscaled) to evaluate the selected model.")
+
+# ---------------- LOAD SCALER AND TRAINING COLUMNS ----------------
+scaler = joblib.load("model/scaler.pkl")        # Your saved StandardScaler
+columns = joblib.load("model/columns.pkl")      # Training columns list
+
+# ---------------- SAFE MODEL LOADING ----------------
+def load_model(path):
+    return joblib.load(path) if os.path.exists(path) else None
+
+# ---------------- LOAD MODELS ----------------
+models = {
+    "Logistic Regression": load_model("model/logistic_regression.pkl"),
+    "Decision Tree": load_model("model/decision_tree.pkl"),
+    "Naive Bayes": load_model("model/naive_bayes.pkl"),
+    "Random Forest": load_model("model/random_forest.pkl"),
+    "XGBoost": load_model("model/xgboost.pkl"),
+    "kNN": load_model("model/knn.pkl")  # your uploaded kNN model
+}
+
+# ---------------- MODEL SELECTION ----------------
+model_name = st.selectbox("Select ML Model", list(models.keys()))
+
+# ---------------- PREPROCESSING FUNCTION ----------------
 def preprocess_test_data(df, target_col, training_columns):
     # Separate features and target
     X = df.drop(target_col, axis=1)
     y = df[target_col].astype(str)
 
-    # Clean target
+    # Clean target column
     y = y.str.strip().str.replace(".", "", regex=False).str.replace(" ", "")
     y = y.map({"<=50K":0, ">50K":1})
 
@@ -23,10 +53,10 @@ def preprocess_test_data(df, target_col, training_columns):
     X = X[valid_idx]
     y = y[valid_idx]
 
-    # One-hot encode features
+    # One-hot encode categorical features
     X = pd.get_dummies(X)
 
-    # Add missing columns
+    # Add missing columns from training
     for col in training_columns:
         if col not in X:
             X[col] = 0
@@ -39,67 +69,7 @@ def preprocess_test_data(df, target_col, training_columns):
     # Reorder columns exactly as training
     X = X[training_columns]
 
-    # Convert everything to numeric and fill NaNs
-    X = X.apply(pd.to_numeric, errors='coerce').fillna(0)
-
-    return X, y
-
-
-# ---------------- PAGE TITLE ----------------
-st.set_page_config(page_title="Adult Income Prediction", layout="wide")
-st.title("💰 Adult Income Classification App")
-st.write("Upload test CSV file (raw) to evaluate the selected model.")
-
-# ---------------- LOAD SCALER AND TRAINING COLUMNS ----------------
-scaler = joblib.load("model/scaler.pkl")
-columns = joblib.load("model/columns.pkl")
-
-# ---------------- LOAD MODELS ----------------
-def load_model(path):
-    return joblib.load(path) if os.path.exists(path) else None
-
-models = {
-    "Logistic Regression": load_model("model/logistic_regression.pkl"),
-    "Decision Tree": load_model("model/decision_tree.pkl"),
-    "Naive Bayes": load_model("model/naive_bayes.pkl"),
-    "Random Forest": load_model("model/random_forest.pkl"),
-    "XGBoost": load_model("model/xgboost.pkl"),
-    "kNN": load_model("model/knn.pkl")  # your uploaded kNN
-}
-
-# ---------------- MODEL SELECTION ----------------
-model_name = st.selectbox("Select ML Model", list(models.keys()))
-
-# ---------------- PREPROCESSING FUNCTION ----------------
-def preprocess_test_data(df, target_col, training_columns):
-    X = df.drop(target_col, axis=1)
-    y = df[target_col].astype(str)
-
-    # Clean target
-    y = y.str.strip().str.replace(".", "", regex=False).str.replace(" ", "")
-    y = y.map({"<=50K": 0, ">50K": 1})
-
-    valid_idx = y.notna()
-    X = X[valid_idx]
-    y = y[valid_idx]
-
-    # One-hot encoding
-    X = pd.get_dummies(X)
-
-    # Add missing training columns
-    for col in training_columns:
-        if col not in X:
-            X[col] = 0
-
-    # Drop extra columns not in training
-    extra_cols = set(X.columns) - set(training_columns)
-    if extra_cols:
-        X = X.drop(columns=list(extra_cols))
-
-    # Reorder columns
-    X = X[training_columns]
-
-    # Convert all to numeric
+    # Convert all features to numeric and fill NaNs
     X = X.apply(pd.to_numeric, errors='coerce').fillna(0)
 
     return X, y
@@ -109,17 +79,20 @@ uploaded_file = st.file_uploader("Upload Test Dataset (CSV)", type=["csv"])
 
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
-    target_col = df.columns[-1]
+    target_col = df.columns[-1]  # assume last column is target
 
-    # Preprocess & scale inside app
+    # Preprocess test data
     X, y = preprocess_test_data(df, target_col, columns)
+
+    # Scale features
     X_scaled = scaler.transform(X)
 
     # Load selected model
     model = models[model_name]
     if model is None:
-        st.error(f"Model '{model_name}' not available")
+        st.error(f"Model '{model_name}' not available.")
     else:
+        # Predictions
         preds = model.predict(X_scaled)
         try:
             probs = model.predict_proba(X_scaled)[:,1]
@@ -134,7 +107,7 @@ if uploaded_file is not None:
         f1 = f1_score(y, preds, zero_division=0)
         mcc = matthews_corrcoef(y, preds)
 
-        # Display
+        # Display metrics
         st.subheader("📊 Evaluation Metrics")
         col1, col2, col3 = st.columns(3)
         col1.metric("Accuracy", f"{acc:.3f}")
@@ -146,7 +119,8 @@ if uploaded_file is not None:
 
         # Confusion matrix
         st.subheader("🔎 Confusion Matrix")
-        st.write(confusion_matrix(y, preds))
+        cm = confusion_matrix(y, preds)
+        st.write(cm)
 
         # Classification report
         st.subheader("📄 Classification Report")
@@ -154,4 +128,3 @@ if uploaded_file is not None:
 
 else:
     st.info("Please upload a CSV file to proceed.")
-
