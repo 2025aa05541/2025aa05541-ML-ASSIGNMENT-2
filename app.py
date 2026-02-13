@@ -56,7 +56,6 @@ if uploaded_file is not None:
     target_col = df.columns[-1]
 
    y = df[target_col].astype(str)
-
    # clean spaces and dots
    y = y.str.strip()
    y = y.str.replace(".", "", regex=False)
@@ -133,5 +132,6 @@ if uploaded_file is not None:
 
 else:
     st.info("Please upload a CSV file to proceed.")
+
 
 
