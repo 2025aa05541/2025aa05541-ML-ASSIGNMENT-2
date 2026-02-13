@@ -2,98 +2,124 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import joblib
+import os
 
-# ================= LOAD FILES =================
-lr = joblib.load("model/logistic_regression.pkl")
-dt = joblib.load("model/decision_tree.pkl")
-knn = joblib.load("model/knn.pkl")
-nb = joblib.load("model/naive_bayes.pkl")
-rf = joblib.load("model/random_forest.pkl")
-xgb = joblib.load("model/xgboost.pkl")
+from sklearn.metrics import (
+    accuracy_score, precision_score, recall_score,
+    f1_score, roc_auc_score, matthews_corrcoef,
+    confusion_matrix, classification_report
+)
 
+from sklearn.neighbors import KNeighborsClassifier
+
+# ---------------- PAGE TITLE ----------------
+st.set_page_config(page_title="Adult Income Prediction", layout="wide")
+st.title("💰 Adult Income Classification App")
+st.write("Upload test CSV file to evaluate selected model.")
+
+# ---------------- LOAD PREPROCESSING FILES ----------------
 scaler = joblib.load("model/scaler.pkl")
-model_columns = joblib.load("model/columns.pkl")
+columns = joblib.load("model/columns.pkl")
+
+# ---------------- SAFE MODEL LOADING ----------------
+def load_model(path):
+    if os.path.exists(path):
+        return joblib.load(path)
+    else:
+        return None
 
 models = {
-    "Logistic Regression": lr,
-    "Decision Tree": dt,
-    "kNN": knn,
-    "Naive Bayes": nb,
-    "Random Forest": rf,
-    "XGBoost": xgb
+    "Logistic Regression": load_model("model/logistic_regression.pkl"),
+    "Decision Tree": load_model("model/decision_tree.pkl"),
+    "Naive Bayes": load_model("model/naive_bayes.pkl"),
+    "Random Forest": load_model("model/random_forest.pkl"),
+    "XGBoost": load_model("model/xgboost.pkl"),
+    "kNN": None  # will train live
 }
 
-# ================= UI =================
-st.title("💰 Adult Income Prediction")
-st.write("Predict whether income is >50K or <=50K")
+# ---------------- MODEL SELECTION ----------------
+model_name = st.selectbox("Select ML Model", list(models.keys()))
 
-# -------- USER INPUT --------
-age = st.slider("Age", 18, 90, 30)
-hours = st.slider("Hours per week", 1, 99, 40)
-education_num = st.slider("Education Number", 1, 16, 10)
-capital_gain = st.number_input("Capital Gain", 0, 100000, 0)
-capital_loss = st.number_input("Capital Loss", 0, 5000, 0)
+# ---------------- DATASET UPLOAD ----------------
+uploaded_file = st.file_uploader("Upload Test Dataset (CSV)", type=["csv"])
 
-workclass = st.selectbox("Workclass", [
-    "Private","Self-emp-not-inc","Self-emp-inc","Federal-gov",
-    "Local-gov","State-gov","Without-pay","Never-worked"
-])
+if uploaded_file is not None:
 
-marital_status = st.selectbox("Marital Status", [
-    "Never-married","Married-civ-spouse","Divorced","Separated",
-    "Widowed","Married-spouse-absent"
-])
+    df = pd.read_csv(uploaded_file)
 
-occupation = st.selectbox("Occupation", [
-    "Tech-support","Craft-repair","Other-service","Sales","Exec-managerial",
-    "Prof-specialty","Handlers-cleaners","Machine-op-inspct",
-    "Adm-clerical","Farming-fishing","Transport-moving","Priv-house-serv",
-    "Protective-serv","Armed-Forces"
-])
+    # -------- CLEAN COLUMN NAMES --------
+    df.columns = df.columns.astype(str)
+    df.columns = df.columns.str.strip()
+    df.columns = df.columns.str.replace(".", "", regex=False)
 
-gender = st.selectbox("Gender", ["Male","Female"])
+    # -------- TARGET DETECTION --------
+    target_col = df.columns[-1]
 
-race = st.selectbox("Race", [
-    "White","Black","Asian-Pac-Islander","Amer-Indian-Eskimo","Other"
-])
+    y = df[target_col].astype(str)
+    y = y.str.strip()
+    y = y.str.replace(".", "", regex=False)
+    y = y.map({"<=50K":0, ">50K":1})
 
-country = st.selectbox("Native Country", ["United-States","India","Other"])
+    X = df.drop(target_col, axis=1)
 
-model_choice = st.selectbox("Choose Model", list(models.keys()))
+    # -------- ONE HOT ENCODING --------
+    X = pd.get_dummies(X)
 
-# ================= PREDICTION =================
-if st.button("Predict Income"):
+    # -------- ALIGN COLUMNS WITH TRAINING --------
+    for col in columns:
+        if col not in X:
+            X[col] = 0
 
-    input_dict = {
-        "age": age,
-        "hours-per-week": hours,
-        "education-num": education_num,
-        "capital-gain": capital_gain,
-        "capital-loss": capital_loss,
-        f"workclass_{workclass}": 1,
-        f"marital-status_{marital_status}": 1,
-        f"occupation_{occupation}": 1,
-        f"gender_{gender}": 1,
-        f"race_{race}": 1,
-        f"native-country_{country}": 1
-    }
+    X = X[columns]
 
-    # Convert to dataframe
-    input_df = pd.DataFrame([input_dict])
+    # -------- SCALING --------
+    X_scaled = scaler.transform(X)
 
-    # Align columns with training data
-    input_df = input_df.reindex(columns=model_columns, fill_value=0)
-
-    # Scale
-    input_scaled = scaler.transform(input_df)
-
-    # Predict
-    model = models[model_choice]
-    prediction = model.predict(input_scaled)[0]
-    prob = model.predict_proba(input_scaled)[0][1]
-
-    # Output
-    if prediction == 1:
-        st.success(f"Predicted Income: >50K 💰 (Confidence: {prob:.2f})")
+    # -------- MODEL SELECTION --------
+    if model_name == "kNN":
+        model = KNeighborsClassifier(n_neighbors=5)
+        model.fit(X_scaled, y)
     else:
-        st.info(f"Predicted Income: <=50K (Confidence: {1-prob:.2f})")
+        model = models[model_name]
+
+    # -------- PREDICTIONS --------
+    preds = model.predict(X_scaled)
+
+    try:
+        probs = model.predict_proba(X_scaled)[:,1]
+        auc = roc_auc_score(y, probs)
+    except:
+        auc = 0.0
+
+    # -------- METRICS --------
+    acc = accuracy_score(y, preds)
+    prec = precision_score(y, preds, zero_division=0)
+    rec = recall_score(y, preds, zero_division=0)
+    f1 = f1_score(y, preds, zero_division=0)
+    mcc = matthews_corrcoef(y, preds)
+
+    # ---------------- DISPLAY METRICS ----------------
+    st.subheader("📊 Evaluation Metrics")
+
+    col1, col2, col3 = st.columns(3)
+
+    col1.metric("Accuracy", f"{acc:.3f}")
+    col1.metric("Precision", f"{prec:.3f}")
+
+    col2.metric("Recall", f"{rec:.3f}")
+    col2.metric("F1 Score", f"{f1:.3f}")
+
+    col3.metric("AUC", f"{auc:.3f}")
+    col3.metric("MCC", f"{mcc:.3f}")
+
+    # ---------------- CONFUSION MATRIX ----------------
+    st.subheader("🔎 Confusion Matrix")
+    cm = confusion_matrix(y, preds)
+    st.write(cm)
+
+    # ---------------- CLASSIFICATION REPORT ----------------
+    st.subheader("📄 Classification Report")
+    st.text(classification_report(y, preds))
+
+else:
+    st.info("Please upload a CSV file to proceed.")
