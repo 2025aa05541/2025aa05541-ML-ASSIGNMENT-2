@@ -68,7 +68,7 @@ if uploaded_file is not None:
     X = pd.get_dummies(X)
 
     # -------- ALIGN COLUMNS WITH TRAINING --------
-    # Add missing columns
+    # Add missing columns from training
     for col in columns:
         if col not in X:
             X[col] = 0
@@ -76,8 +76,8 @@ if uploaded_file is not None:
     # Keep only training columns in correct order
     X = X[[col for col in columns if col in X.columns]]
 
-    # Fill any remaining NaNs
-    X = X.fillna(0)
+    # -------- ENSURE NUMERIC --------
+    X = X.apply(pd.to_numeric, errors='coerce').fillna(0)
 
     # -------- SCALING --------
     X_scaled = scaler.transform(X)
