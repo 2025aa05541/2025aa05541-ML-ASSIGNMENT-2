@@ -9,6 +9,41 @@ from sklearn.metrics import (
     f1_score, roc_auc_score, matthews_corrcoef,
     confusion_matrix, classification_report
 )
+def preprocess_test_data(df, target_col, training_columns):
+    # Separate features and target
+    X = df.drop(target_col, axis=1)
+    y = df[target_col].astype(str)
+
+    # Clean target
+    y = y.str.strip().str.replace(".", "", regex=False).str.replace(" ", "")
+    y = y.map({"<=50K":0, ">50K":1})
+
+    # Keep only valid rows
+    valid_idx = y.notna()
+    X = X[valid_idx]
+    y = y[valid_idx]
+
+    # One-hot encode features
+    X = pd.get_dummies(X)
+
+    # Add missing columns
+    for col in training_columns:
+        if col not in X:
+            X[col] = 0
+
+    # Drop extra columns
+    extra_cols = set(X.columns) - set(training_columns)
+    if extra_cols:
+        X = X.drop(columns=list(extra_cols))
+
+    # Reorder columns exactly as training
+    X = X[training_columns]
+
+    # Convert everything to numeric and fill NaNs
+    X = X.apply(pd.to_numeric, errors='coerce').fillna(0)
+
+    return X, y
+
 
 # ---------------- PAGE TITLE ----------------
 st.set_page_config(page_title="Adult Income Prediction", layout="wide")
@@ -119,3 +154,4 @@ if uploaded_file is not None:
 
 else:
     st.info("Please upload a CSV file to proceed.")
+
