@@ -55,12 +55,22 @@ if uploaded_file is not None:
     # -------- TARGET DETECTION --------
     target_col = df.columns[-1]
 
-    y = df[target_col].astype(str)
-    y = y.str.strip()
-    y = y.str.replace(".", "", regex=False)
-    y = y.map({"<=50K":0, ">50K":1})
+   y = df[target_col].astype(str)
 
-    X = df.drop(target_col, axis=1)
+# clean spaces and dots
+y = y.str.strip()
+y = y.str.replace(".", "", regex=False)
+
+# normalize text
+y = y.str.replace(" ", "")
+
+# map labels
+y = y.map({"<=50K":0, ">50K":1})
+
+# remove rows that failed mapping
+valid_idx = y.notna()
+X = X[valid_idx]
+y = y[valid_idx]
 
     # -------- ONE HOT ENCODING --------
     X = pd.get_dummies(X)
@@ -123,3 +133,4 @@ if uploaded_file is not None:
 
 else:
     st.info("Please upload a CSV file to proceed.")
+
