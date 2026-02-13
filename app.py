@@ -54,22 +54,21 @@ if uploaded_file is not None:
 
     # -------- TARGET DETECTION --------
     target_col = df.columns[-1]
+    X = df.drop(target_col, axis=1)
+    y = df[target_col].astype(str)
 
-   y = df[target_col].astype(str)
-   # clean spaces and dots
-   y = y.str.strip()
-   y = y.str.replace(".", "", regex=False)
+    # clean spaces and dots
+    y = y.str.strip()
+    y = y.str.replace(".", "", regex=False)
+    y = y.str.replace(" ", "")
 
-   # normalize text
-   y = y.str.replace(" ", "")
+    # map labels
+    y = y.map({"<=50K": 0, ">50K": 1})
 
-   # map labels
-   y = y.map({"<=50K":0, ">50K":1})
-
-  # remove rows that failed mapping
-  valid_idx = y.notna()
-  X = X[valid_idx]
-  y = y[valid_idx]
+    # remove rows that failed mapping
+    valid_idx = y.notna()
+    X = X[valid_idx]
+    y = y[valid_idx]
 
     # -------- ONE HOT ENCODING --------
     X = pd.get_dummies(X)
@@ -78,7 +77,6 @@ if uploaded_file is not None:
     for col in columns:
         if col not in X:
             X[col] = 0
-
     X = X[columns]
 
     # -------- SCALING --------
@@ -95,7 +93,7 @@ if uploaded_file is not None:
     preds = model.predict(X_scaled)
 
     try:
-        probs = model.predict_proba(X_scaled)[:,1]
+        probs = model.predict_proba(X_scaled)[:, 1]
         auc = roc_auc_score(y, probs)
     except:
         auc = 0.0
@@ -109,15 +107,11 @@ if uploaded_file is not None:
 
     # ---------------- DISPLAY METRICS ----------------
     st.subheader("📊 Evaluation Metrics")
-
     col1, col2, col3 = st.columns(3)
-
     col1.metric("Accuracy", f"{acc:.3f}")
     col1.metric("Precision", f"{prec:.3f}")
-
     col2.metric("Recall", f"{rec:.3f}")
     col2.metric("F1 Score", f"{f1:.3f}")
-
     col3.metric("AUC", f"{auc:.3f}")
     col3.metric("MCC", f"{mcc:.3f}")
 
@@ -132,6 +126,3 @@ if uploaded_file is not None:
 
 else:
     st.info("Please upload a CSV file to proceed.")
-
-
-
