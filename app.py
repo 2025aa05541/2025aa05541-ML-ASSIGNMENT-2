@@ -1,106 +1,99 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import joblib
-import matplotlib.pyplot as plt
-import seaborn as sns
 
-from sklearn.metrics import (
-    accuracy_score,
-    precision_score,
-    recall_score,
-    f1_score,
-    roc_auc_score,
-    matthews_corrcoef,
-    confusion_matrix
-)
+# ================= LOAD FILES =================
+lr = joblib.load("model/logistic_regression.pkl")
+dt = joblib.load("model/decision_tree.pkl")
+knn = joblib.load("model/knn.pkl")
+nb = joblib.load("model/naive_bayes.pkl")
+rf = joblib.load("model/random_forest.pkl")
+xgb = joblib.load("model/xgboost.pkl")
 
-st.set_page_config(page_title="Adult Income Prediction", layout="centered")
+scaler = joblib.load("model/scaler.pkl")
+model_columns = joblib.load("model/columns.pkl")
 
-st.title("Adult Income Classification App")
-st.write("Upload a test dataset (CSV) to evaluate model performance.")
-
-# -------------------- Model Selection --------------------
-model_option = st.selectbox(
-    "Select Model",
-    ["Logistic Regression", "Decision Tree", "Naive Bayes", "Random Forest", "XGBoost"]
-)
-
-# -------------------- Load Models --------------------
-model_files = {
-    "Logistic Regression": "model/logistic_regression.pkl",
-    "Decision Tree": "model/decision_tree.pkl",
-    "Naive Bayes": "model/naive_bayes.pkl",
-    "Random Forest": "model/random_forest.pkl",
-    "XGBoost": "model/xgboost.pkl"
+models = {
+    "Logistic Regression": lr,
+    "Decision Tree": dt,
+    "kNN": knn,
+    "Naive Bayes": nb,
+    "Random Forest": rf,
+    "XGBoost": xgb
 }
 
-model = joblib.load(model_files[model_option])
-scaler = joblib.load("model/scaler.pkl")
-columns = joblib.load("model/columns.pkl")
+# ================= UI =================
+st.title("💰 Adult Income Prediction")
+st.write("Predict whether income is >50K or <=50K")
 
-# -------------------- Upload CSV --------------------
-uploaded_file = st.file_uploader("Upload Test CSV", type=["csv"])
+# -------- USER INPUT --------
+age = st.slider("Age", 18, 90, 30)
+hours = st.slider("Hours per week", 1, 99, 40)
+education_num = st.slider("Education Number", 1, 16, 10)
+capital_gain = st.number_input("Capital Gain", 0, 100000, 0)
+capital_loss = st.number_input("Capital Loss", 0, 5000, 0)
 
-if uploaded_file is not None:
+workclass = st.selectbox("Workclass", [
+    "Private","Self-emp-not-inc","Self-emp-inc","Federal-gov",
+    "Local-gov","State-gov","Without-pay","Never-worked"
+])
 
-    df = pd.read_csv(uploaded_file)
+marital_status = st.selectbox("Marital Status", [
+    "Never-married","Married-civ-spouse","Divorced","Separated",
+    "Widowed","Married-spouse-absent"
+])
 
-    if "income" not in df.columns:
-        st.error("Dataset must contain 'income' column.")
-        st.stop()
+occupation = st.selectbox("Occupation", [
+    "Tech-support","Craft-repair","Other-service","Sales","Exec-managerial",
+    "Prof-specialty","Handlers-cleaners","Machine-op-inspct",
+    "Adm-clerical","Farming-fishing","Transport-moving","Priv-house-serv",
+    "Protective-serv","Armed-Forces"
+])
 
-    y = df["income"]
-    X = df.drop("income", axis=1)
+gender = st.selectbox("Gender", ["Male","Female"])
 
-    # -------------------- Preprocessing --------------------
-    X = pd.get_dummies(X)
-    X = X.reindex(columns=columns, fill_value=0)
-    X_scaled = scaler.transform(X)
+race = st.selectbox("Race", [
+    "White","Black","Asian-Pac-Islander","Amer-Indian-Eskimo","Other"
+])
 
-    # -------------------- Prediction --------------------
-    preds = model.predict(X_scaled)
+country = st.selectbox("Native Country", ["United-States","India","Other"])
 
-    # -------------------- Metrics --------------------
-    acc = accuracy_score(y, preds)
-    prec = precision_score(y, preds, zero_division=0)
-    rec = recall_score(y, preds, zero_division=0)
-    f1 = f1_score(y, preds, zero_division=0)
-    mcc = matthews_corrcoef(y, preds)
+model_choice = st.selectbox("Choose Model", list(models.keys()))
 
-    try:
-        prob = model.predict_proba(X_scaled)[:, 1]
-        auc = roc_auc_score(y, prob)
-        auc_value = f"{auc:.3f}"
-    except:
-        auc_value = "Not Available"
+# ================= PREDICTION =================
+if st.button("Predict Income"):
 
-    # -------------------- Display Metrics --------------------
-    st.subheader("Evaluation Metrics")
+    input_dict = {
+        "age": age,
+        "hours-per-week": hours,
+        "education-num": education_num,
+        "capital-gain": capital_gain,
+        "capital-loss": capital_loss,
+        f"workclass_{workclass}": 1,
+        f"marital-status_{marital_status}": 1,
+        f"occupation_{occupation}": 1,
+        f"gender_{gender}": 1,
+        f"race_{race}": 1,
+        f"native-country_{country}": 1
+    }
 
-    col1, col2 = st.columns(2)
+    # Convert to dataframe
+    input_df = pd.DataFrame([input_dict])
 
-    col1.metric("Accuracy", f"{acc:.3f}")
-    col1.metric("Precision", f"{prec:.3f}")
-    col1.metric("Recall", f"{rec:.3f}")
+    # Align columns with training data
+    input_df = input_df.reindex(columns=model_columns, fill_value=0)
 
-    col2.metric("F1 Score", f"{f1:.3f}")
-    col2.metric("AUC", auc_value)
-    col2.metric("MCC", f"{mcc:.3f}")
+    # Scale
+    input_scaled = scaler.transform(input_df)
 
-    # -------------------- Confusion Matrix --------------------
-    st.subheader("Confusion Matrix")
+    # Predict
+    model = models[model_choice]
+    prediction = model.predict(input_scaled)[0]
+    prob = model.predict_proba(input_scaled)[0][1]
 
-    cm = confusion_matrix(y, preds)
-
-    fig, ax = plt.subplots()
-    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", ax=ax)
-    ax.set_xlabel("Predicted")
-    ax.set_ylabel("Actual")
-
-    st.pyplot(fig)
-
-    # -------------------- Prediction Summary --------------------
-    st.subheader("Prediction Preview")
-
-    preview_df = pd.DataFrame({"Actual": y, "Predicted": preds})
-    st.dataframe(preview_df.head(20))
+    # Output
+    if prediction == 1:
+        st.success(f"Predicted Income: >50K 💰 (Confidence: {prob:.2f})")
+    else:
+        st.info(f"Predicted Income: <=50K (Confidence: {1-prob:.2f})")
