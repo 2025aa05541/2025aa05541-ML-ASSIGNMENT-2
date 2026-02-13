@@ -15,11 +15,11 @@ from sklearn.neighbors import KNeighborsClassifier
 # ---------------- PAGE TITLE ----------------
 st.set_page_config(page_title="Adult Income Prediction", layout="wide")
 st.title("💰 Adult Income Classification App")
-st.write("Upload raw test CSV (unscaled) to evaluate the selected model.")
+st.write("Upload raw test CSV (unscaled) to evaluate your model.")
 
 # ---------------- LOAD SCALER AND TRAINING COLUMNS ----------------
 scaler = joblib.load("model/scaler.pkl")        # Your saved StandardScaler
-columns = joblib.load("model/columns.pkl")      # Training columns list
+columns = joblib.load("model/columns.pkl")      # Columns used in training
 
 # ---------------- SAFE MODEL LOADING ----------------
 def load_model(path):
@@ -38,15 +38,15 @@ models = {
 # ---------------- MODEL SELECTION ----------------
 model_name = st.selectbox("Select ML Model", list(models.keys()))
 
-# ---------------- PREPROCESSING FUNCTION ----------------
+# ---------------- ROBUST PREPROCESSING ----------------
 def preprocess_test_data(df, target_col, training_columns):
     # Separate features and target
     X = df.drop(target_col, axis=1)
     y = df[target_col].astype(str)
 
-    # Clean target column
+    # Clean target
     y = y.str.strip().str.replace(".", "", regex=False).str.replace(" ", "")
-    y = y.map({"<=50K":0, ">50K":1})
+    y = y.map({"<=50K": 0, ">50K": 1})
 
     # Keep only valid rows
     valid_idx = y.notna()
@@ -56,7 +56,7 @@ def preprocess_test_data(df, target_col, training_columns):
     # One-hot encode categorical features
     X = pd.get_dummies(X)
 
-    # Add missing columns from training
+    # Add missing training columns
     for col in training_columns:
         if col not in X:
             X[col] = 0
@@ -66,10 +66,10 @@ def preprocess_test_data(df, target_col, training_columns):
     if extra_cols:
         X = X.drop(columns=list(extra_cols))
 
-    # Reorder columns exactly as training
+    # Reorder columns exactly like training
     X = X[training_columns]
 
-    # Convert all features to numeric and fill NaNs
+    # Convert all to numeric and fill NaNs
     X = X.apply(pd.to_numeric, errors='coerce').fillna(0)
 
     return X, y
@@ -81,10 +81,10 @@ if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
     target_col = df.columns[-1]  # assume last column is target
 
-    # Preprocess test data
+    # Preprocess and align columns
     X, y = preprocess_test_data(df, target_col, columns)
 
-    # Scale features
+    # Scale features safely
     X_scaled = scaler.transform(X)
 
     # Load selected model
@@ -92,22 +92,22 @@ if uploaded_file is not None:
     if model is None:
         st.error(f"Model '{model_name}' not available.")
     else:
-        # Predictions
+        # Make predictions
         preds = model.predict(X_scaled)
         try:
-            probs = model.predict_proba(X_scaled)[:,1]
+            probs = model.predict_proba(X_scaled)[:, 1]
             auc = roc_auc_score(y, probs)
         except:
             auc = 0.0
 
-        # Metrics
+        # ---------------- METRICS ----------------
         acc = accuracy_score(y, preds)
         prec = precision_score(y, preds, zero_division=0)
         rec = recall_score(y, preds, zero_division=0)
         f1 = f1_score(y, preds, zero_division=0)
         mcc = matthews_corrcoef(y, preds)
 
-        # Display metrics
+        # ---------------- DISPLAY ----------------
         st.subheader("📊 Evaluation Metrics")
         col1, col2, col3 = st.columns(3)
         col1.metric("Accuracy", f"{acc:.3f}")
