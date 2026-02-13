@@ -57,20 +57,20 @@ if uploaded_file is not None:
 
    y = df[target_col].astype(str)
 
-# clean spaces and dots
-y = y.str.strip()
-y = y.str.replace(".", "", regex=False)
+   # clean spaces and dots
+   y = y.str.strip()
+   y = y.str.replace(".", "", regex=False)
 
-# normalize text
-y = y.str.replace(" ", "")
+   # normalize text
+   y = y.str.replace(" ", "")
 
-# map labels
-y = y.map({"<=50K":0, ">50K":1})
+   # map labels
+   y = y.map({"<=50K":0, ">50K":1})
 
-# remove rows that failed mapping
-valid_idx = y.notna()
-X = X[valid_idx]
-y = y[valid_idx]
+  # remove rows that failed mapping
+  valid_idx = y.notna()
+  X = X[valid_idx]
+  y = y[valid_idx]
 
     # -------- ONE HOT ENCODING --------
     X = pd.get_dummies(X)
@@ -133,4 +133,5 @@ y = y[valid_idx]
 
 else:
     st.info("Please upload a CSV file to proceed.")
+
 
