@@ -39,46 +39,7 @@ models = {
 # ---------------- MODEL SELECTION ----------------
 model_name = st.selectbox("Select ML Model", list(models.keys()))
 
-# ---------------- DATASET UPLOAD ----------------
-uploaded_file = st.file_uploader("Upload Test Dataset (CSV)", type=["csv"])
-
-if uploaded_file is not None:
-
-    df = pd.read_csv(uploaded_file)
-
-    # -------- CLEAN COLUMN NAMES --------
-    df.columns = df.columns.astype(str).str.strip()
-    df.columns = df.columns.str.replace(".", "", regex=False)
-
-    # -------- TARGET DETECTION --------
-    target_col = df.columns[-1]
-    X = df.drop(target_col, axis=1)
-    y = df[target_col].astype(str)
-
-    # Clean target values
-    y = y.str.strip().str.replace(".", "", regex=False).str.replace(" ", "")
-    y = y.map({"<=50K": 0, ">50K": 1})
-
-    # Remove rows that failed mapping
-    valid_idx = y.notna()
-    X = X[valid_idx]
-    y = y[valid_idx]
-
-    # -------- ONE HOT ENCODING --------
-    X = pd.get_dummies(X)
-
-    # -------- ALIGN COLUMNS WITH TRAINING --------
-    # Add missing columns from training
-    for col in columns:
-        if col not in X:
-            X[col] = 0
-
-    # Keep only training columns in correct order
-    X = X[[col for col in columns if col in X.columns]]
-
-    # -------- ENSURE NUMERIC --------
-    X = X.apply(pd.to_numeric, errors='coerce').fillna(0)
-    # -------- ROBUST PREPROCESSING FUNCTION --------
+# ---------------- ROBUST PREPROCESSING FUNCTION ----------------
 def preprocess_test_data(df, target_col, training_columns):
     # Separate features and target
     X = df.drop(target_col, axis=1)
@@ -87,6 +48,8 @@ def preprocess_test_data(df, target_col, training_columns):
     # Clean target
     y = y.str.strip().str.replace(".", "", regex=False).str.replace(" ", "")
     y = y.map({"<=50K": 0, ">50K": 1})
+
+    # Keep only valid rows
     valid_idx = y.notna()
     X = X[valid_idx]
     y = y[valid_idx]
@@ -107,9 +70,18 @@ def preprocess_test_data(df, target_col, training_columns):
 
     return X, y
 
+# ---------------- DATASET UPLOAD ----------------
+uploaded_file = st.file_uploader("Upload Test Dataset (CSV)", type=["csv"])
+
+if uploaded_file is not None:
+
+    df = pd.read_csv(uploaded_file)
+    target_col = df.columns[-1]
+
+    # Preprocess test data
+    X, y = preprocess_test_data(df, target_col, columns)
 
     # -------- SCALING --------
-    X, y = preprocess_test_data(df, target_col, columns)
     X_scaled = scaler.transform(X)
 
     # -------- MODEL SELECTION --------
@@ -155,4 +127,3 @@ def preprocess_test_data(df, target_col, training_columns):
 
 else:
     st.info("Please upload a CSV file to proceed.")
-
