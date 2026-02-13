@@ -78,8 +78,38 @@ if uploaded_file is not None:
 
     # -------- ENSURE NUMERIC --------
     X = X.apply(pd.to_numeric, errors='coerce').fillna(0)
+    # -------- ROBUST PREPROCESSING FUNCTION --------
+def preprocess_test_data(df, target_col, training_columns):
+    # Separate features and target
+    X = df.drop(target_col, axis=1)
+    y = df[target_col].astype(str)
+
+    # Clean target
+    y = y.str.strip().str.replace(".", "", regex=False).str.replace(" ", "")
+    y = y.map({"<=50K": 0, ">50K": 1})
+    valid_idx = y.notna()
+    X = X[valid_idx]
+    y = y[valid_idx]
+
+    # One-hot encoding
+    X = pd.get_dummies(X)
+
+    # Add missing training columns
+    for col in training_columns:
+        if col not in X:
+            X[col] = 0
+
+    # Keep only training columns in order
+    X = X[[col for col in training_columns if col in X.columns]]
+
+    # Convert all to numeric and fill NaNs
+    X = X.apply(pd.to_numeric, errors='coerce').fillna(0)
+
+    return X, y
+
 
     # -------- SCALING --------
+    X, y = preprocess_test_data(df, target_col, columns)
     X_scaled = scaler.transform(X)
 
     # -------- MODEL SELECTION --------
@@ -125,3 +155,4 @@ if uploaded_file is not None:
 
 else:
     st.info("Please upload a CSV file to proceed.")
+
