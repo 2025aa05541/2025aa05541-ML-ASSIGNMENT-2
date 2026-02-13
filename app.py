@@ -29,12 +29,21 @@ if uploaded_file is not None:
     y_prob = model.predict_proba(X)[:,1]
     
     st.subheader("Evaluation Metrics")
-    st.write("Accuracy:", accuracy_score(y, y_pred))
-    st.write("AUC:", roc_auc_score(y, y_prob))
-    st.write("Precision:", precision_score(y, y_pred))
-    st.write("Recall:", recall_score(y, y_pred))
-    st.write("F1 Score:", f1_score(y, y_pred))
-    st.write("MCC:", matthews_corrcoef(y, y_pred))
+   st.write("Accuracy:", round(accuracy_score(y, y_pred), 4))
+st.write("AUC:", round(roc_auc_score(y, y_prob), 4))
+st.write("Precision:", round(precision_score(y, y_pred), 4))
+st.write("Recall:", round(recall_score(y, y_pred), 4))
+st.write("F1 Score:", round(f1_score(y, y_pred), 4))
+st.write("MCC:", round(matthews_corrcoef(y, y_pred), 4))
     
     st.subheader("Confusion Matrix")
+    cm = confusion_matrix(y, y_pred)
+
+fig, ax = plt.subplots()
+sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=ax)
+ax.set_xlabel("Predicted")
+ax.set_ylabel("Actual")
+
+st.pyplot(fig)
     st.write(confusion_matrix(y, y_pred))
+
