@@ -13,35 +13,30 @@ from sklearn.metrics import (
 # ---------------- PAGE TITLE ----------------
 st.set_page_config(page_title="Adult Income Prediction", layout="wide")
 st.title("💰 Adult Income Classification App")
-st.write("Upload test CSV file to evaluate the selected model.")
+st.write("Upload test CSV file (raw) to evaluate the selected model.")
 
-# ---------------- LOAD PREPROCESSING FILES ----------------
+# ---------------- LOAD SCALER AND TRAINING COLUMNS ----------------
 scaler = joblib.load("model/scaler.pkl")
 columns = joblib.load("model/columns.pkl")
 
-# ---------------- SAFE MODEL LOADING ----------------
-def load_model(path):
-    if os.path.exists(path):
-        return joblib.load(path)
-    else:
-        return None
-
 # ---------------- LOAD MODELS ----------------
+def load_model(path):
+    return joblib.load(path) if os.path.exists(path) else None
+
 models = {
     "Logistic Regression": load_model("model/logistic_regression.pkl"),
     "Decision Tree": load_model("model/decision_tree.pkl"),
     "Naive Bayes": load_model("model/naive_bayes.pkl"),
     "Random Forest": load_model("model/random_forest.pkl"),
     "XGBoost": load_model("model/xgboost.pkl"),
-    "kNN": load_model("model/knn.pkl")  # load your uploaded kNN model
+    "kNN": load_model("model/knn.pkl")  # your uploaded kNN
 }
 
 # ---------------- MODEL SELECTION ----------------
 model_name = st.selectbox("Select ML Model", list(models.keys()))
 
-# ---------------- ROBUST PREPROCESSING FUNCTION ----------------
+# ---------------- PREPROCESSING FUNCTION ----------------
 def preprocess_test_data(df, target_col, training_columns):
-    # Separate features and target
     X = df.drop(target_col, axis=1)
     y = df[target_col].astype(str)
 
@@ -49,7 +44,6 @@ def preprocess_test_data(df, target_col, training_columns):
     y = y.str.strip().str.replace(".", "", regex=False).str.replace(" ", "")
     y = y.map({"<=50K": 0, ">50K": 1})
 
-    # Keep only valid rows
     valid_idx = y.notna()
     X = X[valid_idx]
     y = y[valid_idx]
@@ -62,51 +56,50 @@ def preprocess_test_data(df, target_col, training_columns):
         if col not in X:
             X[col] = 0
 
-    # Keep only training columns in order
-    X = X[[col for col in training_columns if col in X.columns]]
+    # Drop extra columns not in training
+    extra_cols = set(X.columns) - set(training_columns)
+    if extra_cols:
+        X = X.drop(columns=list(extra_cols))
 
-    # Convert all to numeric and fill NaNs
+    # Reorder columns
+    X = X[training_columns]
+
+    # Convert all to numeric
     X = X.apply(pd.to_numeric, errors='coerce').fillna(0)
 
     return X, y
 
-# ---------------- DATASET UPLOAD ----------------
+# ---------------- DATA UPLOAD ----------------
 uploaded_file = st.file_uploader("Upload Test Dataset (CSV)", type=["csv"])
 
 if uploaded_file is not None:
-
     df = pd.read_csv(uploaded_file)
     target_col = df.columns[-1]
 
-    # Preprocess test data
+    # Preprocess & scale inside app
     X, y = preprocess_test_data(df, target_col, columns)
-
-    # -------- SCALING --------
     X_scaled = scaler.transform(X)
 
-    # -------- MODEL SELECTION --------
+    # Load selected model
     model = models[model_name]
-
     if model is None:
-        st.error(f"The selected model '{model_name}' is not available.")
+        st.error(f"Model '{model_name}' not available")
     else:
-        # -------- PREDICTIONS --------
         preds = model.predict(X_scaled)
-
         try:
-            probs = model.predict_proba(X_scaled)[:, 1]
+            probs = model.predict_proba(X_scaled)[:,1]
             auc = roc_auc_score(y, probs)
         except:
             auc = 0.0
 
-        # -------- METRICS --------
+        # Metrics
         acc = accuracy_score(y, preds)
         prec = precision_score(y, preds, zero_division=0)
         rec = recall_score(y, preds, zero_division=0)
         f1 = f1_score(y, preds, zero_division=0)
         mcc = matthews_corrcoef(y, preds)
 
-        # ---------------- DISPLAY METRICS ----------------
+        # Display
         st.subheader("📊 Evaluation Metrics")
         col1, col2, col3 = st.columns(3)
         col1.metric("Accuracy", f"{acc:.3f}")
@@ -116,12 +109,11 @@ if uploaded_file is not None:
         col3.metric("AUC", f"{auc:.3f}")
         col3.metric("MCC", f"{mcc:.3f}")
 
-        # ---------------- CONFUSION MATRIX ----------------
+        # Confusion matrix
         st.subheader("🔎 Confusion Matrix")
-        cm = confusion_matrix(y, preds)
-        st.write(cm)
+        st.write(confusion_matrix(y, preds))
 
-        # ---------------- CLASSIFICATION REPORT ----------------
+        # Classification report
         st.subheader("📄 Classification Report")
         st.text(classification_report(y, preds))
 
