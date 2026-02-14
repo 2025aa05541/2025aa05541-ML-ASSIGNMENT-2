@@ -69,15 +69,25 @@ if uploaded_file is not None:
     mcc_placeholder.write(f"MCC: {round(matthews_corrcoef(y, y_pred), 4)}")
 
     # Confusion Matrix Plot
-    cm = confusion_matrix(y, y_pred)
+   cm = confusion_matrix(y, y_pred)
 
-    fig, ax = plt.subplots()
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=ax)
-    ax.set_xlabel("Predicted")
-    ax.set_ylabel("Actual")
+   fig, ax = plt.subplots(figsize=(5, 4))
 
-    cm_placeholder.pyplot(fig)
+   sns.heatmap(
+     cm,
+     annot=True,
+     fmt='d',
+     cmap='Blues',
+     xticklabels=["<=50K", ">50K"],
+     yticklabels=["<=50K", ">50K"],
+     ax=ax
+)
 
+ax.set_xlabel("Predicted Label")
+ax.set_ylabel("Actual Label")
+ax.set_title("Confusion Matrix")
+
+st.pyplot(fig)
 else:
     acc_placeholder.write("Accuracy: -")
     auc_placeholder.write("AUC: -")
@@ -86,3 +96,4 @@ else:
     f1_placeholder.write("F1 Score: -")
     mcc_placeholder.write("MCC: -")
     cm_placeholder.write("Confusion matrix will appear after uploading test data.")
+
