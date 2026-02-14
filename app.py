@@ -46,18 +46,49 @@ mcc_placeholder = st.empty()
 
 st.subheader("Confusion Matrix")
 cm_placeholder = st.empty()
+st.subheader("Confusion Matrix")
 
+fig, ax = plt.subplots(figsize=(5, 4))
+
+# Default empty matrix
+default_cm = [[0, 0], [0, 0]]
+
+sns.heatmap(
+    default_cm,
+    annot=True,
+    fmt='d',
+    cmap='Blues',
+    xticklabels=["<=50K", ">50K"],
+    yticklabels=["<=50K", ">50K"],
+    ax=ax
+)
+
+ax.set_xlabel("Predicted Label")
+ax.set_ylabel("Actual Label")
+ax.set_title("Confusion Matrix")
+
+cm_placeholder = st.pyplot(fig)
 if uploaded_file is not None:
 
-    data = pd.read_csv(uploaded_file)
+    m = confusion_matrix(y, y_pred)
 
-    X = data.drop("income", axis=1)
-    y = data["income"]
+fig, ax = plt.subplots(figsize=(5, 4))
 
-    model = joblib.load(f"model/{model_name}.pkl")
+sns.heatmap(
+    cm,
+    annot=True,
+    fmt='d',
+    cmap='Blues',
+    xticklabels=["<=50K", ">50K"],
+    yticklabels=["<=50K", ">50K"],
+    ax=ax
+)
 
-    y_pred = model.predict(X)
-    y_prob = model.predict_proba(X)[:, 1]
+ax.set_xlabel("Predicted Label")
+ax.set_ylabel("Actual Label")
+ax.set_title("Confusion Matrix")
+
+st.pyplot(fig)
 
     # Metrics
     acc_placeholder.write(f"Accuracy: {round(accuracy_score(y, y_pred), 4)}")
@@ -96,3 +127,4 @@ else:
     f1_placeholder.write("F1 Score: -")
     mcc_placeholder.write("MCC: -")
     cm_placeholder.write("Confusion matrix will appear after uploading test data.")
+
