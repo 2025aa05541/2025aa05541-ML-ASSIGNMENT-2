@@ -14,9 +14,11 @@ from sklearn.metrics import (
     confusion_matrix
 )
 
+st.set_page_config(page_title="Adult Income Classification", layout="centered")
+
 st.title("Adult Income Classification App")
 
-# Model selection dropdown
+# Model Selection
 model_name = st.selectbox(
     "Select Model",
     [
@@ -29,10 +31,24 @@ model_name = st.selectbox(
     ]
 )
 
-# Upload CSV
+# File Upload
 uploaded_file = st.file_uploader("Upload Test CSV File", type=["csv"])
 
+st.subheader("Evaluation Metrics")
+
+# Create placeholders (template shown first)
+acc_placeholder = st.empty()
+auc_placeholder = st.empty()
+prec_placeholder = st.empty()
+rec_placeholder = st.empty()
+f1_placeholder = st.empty()
+mcc_placeholder = st.empty()
+
+st.subheader("Confusion Matrix")
+cm_placeholder = st.empty()
+
 if uploaded_file is not None:
+
     data = pd.read_csv(uploaded_file)
 
     X = data.drop("income", axis=1)
@@ -44,17 +60,15 @@ if uploaded_file is not None:
     y_pred = model.predict(X)
     y_prob = model.predict_proba(X)[:, 1]
 
-    st.subheader("Evaluation Metrics")
+    # Update placeholders with values
+    acc_placeholder.write(f"Accuracy: {round(accuracy_score(y, y_pred), 4)}")
+    auc_placeholder.write(f"AUC: {round(roc_auc_score(y, y_prob), 4)}")
+    prec_placeholder.write(f"Precision: {round(precision_score(y, y_pred), 4)}")
+    rec_placeholder.write(f"Recall: {round(recall_score(y, y_pred), 4)}")
+    f1_placeholder.write(f"F1 Score: {round(f1_score(y, y_pred), 4)}")
+    mcc_placeholder.write(f"MCC: {round(matthews_corrcoef(y, y_pred), 4)}")
 
-    st.write("Accuracy:", round(accuracy_score(y, y_pred), 4))
-    st.write("AUC:", round(roc_auc_score(y, y_prob), 4))
-    st.write("Precision:", round(precision_score(y, y_pred), 4))
-    st.write("Recall:", round(recall_score(y, y_pred), 4))
-    st.write("F1 Score:", round(f1_score(y, y_pred), 4))
-    st.write("MCC:", round(matthews_corrcoef(y, y_pred), 4))
-
-    st.subheader("Confusion Matrix")
-
+    # Confusion Matrix Plot
     cm = confusion_matrix(y, y_pred)
 
     fig, ax = plt.subplots()
@@ -62,4 +76,13 @@ if uploaded_file is not None:
     ax.set_xlabel("Predicted")
     ax.set_ylabel("Actual")
 
-    st.pyplot(fig)
+    cm_placeholder.pyplot(fig)
+
+else:
+    acc_placeholder.write("Accuracy: -")
+    auc_placeholder.write("AUC: -")
+    prec_placeholder.write("Precision: -")
+    rec_placeholder.write("Recall: -")
+    f1_placeholder.write("F1 Score: -")
+    mcc_placeholder.write("MCC: -")
+    cm_placeholder.write("Confusion matrix will appear after uploading test data.")
