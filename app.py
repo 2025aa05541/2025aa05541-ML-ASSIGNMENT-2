@@ -36,7 +36,7 @@ uploaded_file = st.file_uploader("Upload Test CSV File", type=["csv"])
 
 st.subheader("Evaluation Metrics")
 
-# Create placeholders (template shown first)
+# Placeholders
 acc_placeholder = st.empty()
 auc_placeholder = st.empty()
 prec_placeholder = st.empty()
@@ -54,13 +54,12 @@ if uploaded_file is not None:
     X = data.drop("income", axis=1)
     y = data["income"]
 
-    # Load selected model
     model = joblib.load(f"model/{model_name}.pkl")
 
     y_pred = model.predict(X)
     y_prob = model.predict_proba(X)[:, 1]
 
-    # Update placeholders with values
+    # Metrics
     acc_placeholder.write(f"Accuracy: {round(accuracy_score(y, y_pred), 4)}")
     auc_placeholder.write(f"AUC: {round(roc_auc_score(y, y_prob), 4)}")
     prec_placeholder.write(f"Precision: {round(precision_score(y, y_pred), 4)}")
@@ -68,26 +67,27 @@ if uploaded_file is not None:
     f1_placeholder.write(f"F1 Score: {round(f1_score(y, y_pred), 4)}")
     mcc_placeholder.write(f"MCC: {round(matthews_corrcoef(y, y_pred), 4)}")
 
-    # Confusion Matrix Plot
-   cm = confusion_matrix(y, y_pred)
+    # Confusion Matrix
+    cm = confusion_matrix(y, y_pred)
 
-   fig, ax = plt.subplots(figsize=(5, 4))
+    fig, ax = plt.subplots(figsize=(5, 4))
 
-   sns.heatmap(
-     cm,
-     annot=True,
-     fmt='d',
-     cmap='Blues',
-     xticklabels=["<=50K", ">50K"],
-     yticklabels=["<=50K", ">50K"],
-     ax=ax
-)
+    sns.heatmap(
+        cm,
+        annot=True,
+        fmt='d',
+        cmap='Blues',
+        xticklabels=["<=50K", ">50K"],
+        yticklabels=["<=50K", ">50K"],
+        ax=ax
+    )
 
-ax.set_xlabel("Predicted Label")
-ax.set_ylabel("Actual Label")
-ax.set_title("Confusion Matrix")
+    ax.set_xlabel("Predicted Label")
+    ax.set_ylabel("Actual Label")
+    ax.set_title("Confusion Matrix")
 
-st.pyplot(fig)
+    cm_placeholder.pyplot(fig)
+
 else:
     acc_placeholder.write("Accuracy: -")
     auc_placeholder.write("AUC: -")
@@ -96,4 +96,3 @@ else:
     f1_placeholder.write("F1 Score: -")
     mcc_placeholder.write("MCC: -")
     cm_placeholder.write("Confusion matrix will appear after uploading test data.")
-
