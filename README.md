@@ -7,9 +7,7 @@ to predict whether an individual earns more than $50K per year based on demograp
 and employment-related attributes. 
 
 This is a binary classification problem where the target variable is income category:
-<=50K
->50K
-
+<=50K,>50K
 The goal is to compare different classification algorithms using multiple evaluation metrics 
 and deploy the best-performing models using Streamlit.
 
