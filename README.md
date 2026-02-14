@@ -71,14 +71,15 @@ The following six classification models were implemented:
 
 ## Comparison Table
 
-| ML Model Name | Accuracy | AUC | Precision | Recall | F1 | MCC |
-|---------------|----------|-----|-----------|--------|----|-----|
-| Logistic Regression | (Fill) | (Fill) | (Fill) | (Fill) | (Fill) | (Fill) |
-| Decision Tree | (Fill) | (Fill) | (Fill) | (Fill) | (Fill) | (Fill) |
-| kNN | (Fill) | (Fill) | (Fill) | (Fill) | (Fill) | (Fill) |
-| Naive Bayes | (Fill) | (Fill) | (Fill) | (Fill) | (Fill) | (Fill) |
-| Random Forest (Ensemble) | (Fill) | (Fill) | (Fill) | (Fill) | (Fill) | (Fill) |
-| XGBoost (Ensemble) | (Fill) | (Fill) | (Fill) | (Fill) | (Fill) | (Fill) |
+| ML Model Name            | Accuracy | AUC    | Precision | Recall | F1     | MCC    |
+| ------------------------ | -------- | ------ | --------- | ------ | ------ | ------ |
+| Logistic Regression      | 0.8045   | 0.8115 | 0.6886    | 0.3906 | 0.4985 | 0.4125 |
+| Decision Tree            | 0.7998   | 0.7362 | 0.5949    | 0.6100 | 0.6024 | 0.4687 |
+| kNN                      | 0.7618   | 0.6529 | 0.5365    | 0.3087 | 0.3919 | 0.2721 |
+| Naive Bayes              | 0.7824   | 0.8155 | 0.6410    | 0.2833 | 0.3930 | 0.3190 |
+| Random Forest (Ensemble) | 0.8502   | 0.9089 | 0.7854    | 0.5467 | 0.6447 | 0.5681 |
+| XGBoost (Ensemble)       | 0.8603   | 0.9206 | 0.7541    | 0.6500 | 0.6982 | 0.6108 |
+
 
 
 ## Model Performance Observations
@@ -96,7 +97,7 @@ The following six classification models were implemented:
 ## Deployment
 
 The application is deployed using Streamlit Community Cloud.
-
+https://2025aa05541-ml-assignment-2-bzqc7eqepvhwqtyeytjvgz.streamlit.app/
 Features of the App:
 - CSV Test Data Upload
 - Model Selection Dropdown
