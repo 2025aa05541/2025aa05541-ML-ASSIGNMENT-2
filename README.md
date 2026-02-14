@@ -84,12 +84,13 @@ The following six classification models were implemented:
 
 | ML Model Name | Observation about model performance |
 |---------------|--------------------------------------|
-| Logistic Regression | Performs well for linearly separable data. Shows balanced overall performance but may have lower recall for the >50K class. |
-| Decision Tree | Captures non-linear patterns but may overfit without proper depth control. |
-| kNN | Sensitive to feature scaling and value of k. Moderate performance on larger datasets. |
-| Naive Bayes | Fast and efficient but assumes independence between features. |
-| Random Forest (Ensemble) | Reduces overfitting compared to Decision Tree and provides improved stability. |
-| XGBoost (Ensemble) | Typically achieves higher AUC and F1 score due to boosting mechanism and better handling of complex patterns. |
+| Logistic Regression | Achieved 0.8045 accuracy with moderate AUC (0.8115). Precision is high (0.6886) but recall is relatively low (0.3906), indicating difficulty in correctly identifying >50K cases.            |
+| Decision Tree       | Accuracy (0.7998) is slightly lower than Logistic Regression, but recall (0.61) is higher, meaning it detects more high-income individuals. However, AUC (0.7362) is lower.                  |
+| kNN                 | Shows lowest overall performance with accuracy 0.7618 and MCC 0.2721. Particularly weak recall (0.3087) suggests poor identification of >50K class.                                          |
+| Naive Bayes         | Provides reasonable AUC (0.8155) but very low recall (0.2833), meaning it struggles to classify high-income cases correctly.                                                                 |
+| Random Forest       | Strong ensemble performance with accuracy 0.8502 and AUC 0.9089. Balanced precision (0.7854) and recall (0.5467) improve overall F1 score.                                                   |
+| XGBoost             | Best performing model with highest accuracy (0.8603), AUC (0.9206), and MCC (0.6108). Recall (0.65) is also the highest among all models, making it the most balanced and robust classifier. |
+
 
 
 ## Deployment
