@@ -15,7 +15,6 @@ from sklearn.metrics import (
 )
 
 st.set_page_config(page_title="Adult Income Classification", layout="centered")
-
 st.title("Adult Income Classification App")
 
 # Model Selection
@@ -34,30 +33,38 @@ model_name = st.selectbox(
 # File Upload
 uploaded_file = st.file_uploader("Upload Test CSV File", type=["csv"])
 
+# ================= METRICS =================
 st.subheader("Evaluation Metrics")
 
-# Placeholders
-acc_placeholder = st.empty()
-auc_placeholder = st.empty()
-prec_placeholder = st.empty()
-rec_placeholder = st.empty()
-f1_placeholder = st.empty()
-mcc_placeholder = st.empty()
+acc_p = st.empty()
+auc_p = st.empty()
+prec_p = st.empty()
+rec_p = st.empty()
+f1_p = st.empty()
+mcc_p = st.empty()
 
+# Default metric placeholders
+acc_p.write("Accuracy: -")
+auc_p.write("AUC: -")
+prec_p.write("Precision: -")
+rec_p.write("Recall: -")
+f1_p.write("F1 Score: -")
+mcc_p.write("MCC: -")
+
+# ================= CONFUSION MATRIX =================
 st.subheader("Confusion Matrix")
+
 cm_placeholder = st.empty()
-st.subheader("Confusion Matrix")
 
+# Show EMPTY confusion matrix template initially
 fig, ax = plt.subplots(figsize=(5, 4))
-
-# Default empty matrix
 default_cm = [[0, 0], [0, 0]]
 
 sns.heatmap(
     default_cm,
     annot=True,
-    fmt='d',
-    cmap='Blues',
+    fmt="d",
+    cmap="Blues",
     xticklabels=["<=50K", ">50K"],
     yticklabels=["<=50K", ">50K"],
     ax=ax
@@ -67,47 +74,38 @@ ax.set_xlabel("Predicted Label")
 ax.set_ylabel("Actual Label")
 ax.set_title("Confusion Matrix")
 
-cm_placeholder = st.pyplot(fig)
+cm_placeholder.pyplot(fig)
+
+# ================= AFTER FILE UPLOAD =================
 if uploaded_file is not None:
 
-    m = confusion_matrix(y, y_pred)
+    data = pd.read_csv(uploaded_file)
 
-fig, ax = plt.subplots(figsize=(5, 4))
+    X = data.drop("income", axis=1)
+    y = data["income"]
 
-sns.heatmap(
-    cm,
-    annot=True,
-    fmt='d',
-    cmap='Blues',
-    xticklabels=["<=50K", ">50K"],
-    yticklabels=["<=50K", ">50K"],
-    ax=ax
-)
+    model = joblib.load(f"model/{model_name}.pkl")
 
-ax.set_xlabel("Predicted Label")
-ax.set_ylabel("Actual Label")
-ax.set_title("Confusion Matrix")
+    y_pred = model.predict(X)
+    y_prob = model.predict_proba(X)[:, 1]
 
-st.pyplot(fig)
+    # Update metrics
+    acc_p.write(f"Accuracy: {round(accuracy_score(y, y_pred), 4)}")
+    auc_p.write(f"AUC: {round(roc_auc_score(y, y_prob), 4)}")
+    prec_p.write(f"Precision: {round(precision_score(y, y_pred), 4)}")
+    rec_p.write(f"Recall: {round(recall_score(y, y_pred), 4)}")
+    f1_p.write(f"F1 Score: {round(f1_score(y, y_pred), 4)}")
+    mcc_p.write(f"MCC: {round(matthews_corrcoef(y, y_pred), 4)}")
 
-    # Metrics
-    acc_placeholder.write(f"Accuracy: {round(accuracy_score(y, y_pred), 4)}")
-    auc_placeholder.write(f"AUC: {round(roc_auc_score(y, y_prob), 4)}")
-    prec_placeholder.write(f"Precision: {round(precision_score(y, y_pred), 4)}")
-    rec_placeholder.write(f"Recall: {round(recall_score(y, y_pred), 4)}")
-    f1_placeholder.write(f"F1 Score: {round(f1_score(y, y_pred), 4)}")
-    mcc_placeholder.write(f"MCC: {round(matthews_corrcoef(y, y_pred), 4)}")
-
-    # Confusion Matrix
+    # Update confusion matrix
     cm = confusion_matrix(y, y_pred)
 
     fig, ax = plt.subplots(figsize=(5, 4))
-
     sns.heatmap(
         cm,
         annot=True,
-        fmt='d',
-        cmap='Blues',
+        fmt="d",
+        cmap="Blues",
         xticklabels=["<=50K", ">50K"],
         yticklabels=["<=50K", ">50K"],
         ax=ax
@@ -118,13 +116,3 @@ st.pyplot(fig)
     ax.set_title("Confusion Matrix")
 
     cm_placeholder.pyplot(fig)
-
-else:
-    acc_placeholder.write("Accuracy: -")
-    auc_placeholder.write("AUC: -")
-    prec_placeholder.write("Precision: -")
-    rec_placeholder.write("Recall: -")
-    f1_placeholder.write("F1 Score: -")
-    mcc_placeholder.write("MCC: -")
-    cm_placeholder.write("Confusion matrix will appear after uploading test data.")
-
