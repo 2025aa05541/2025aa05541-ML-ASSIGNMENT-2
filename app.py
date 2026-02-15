@@ -15,17 +15,10 @@ from sklearn.metrics import (
     confusion_matrix
 )
 
-# --------------------------------------------------
-# Page Config
-# --------------------------------------------------
 
 st.set_page_config(page_title="Adult Income Classification", layout="centered")
 
 st.title("Adult Income Classification App")
-
-# --------------------------------------------------
-# Model Selection
-# --------------------------------------------------
 
 model_name = st.selectbox(
     "Select Model",
@@ -38,10 +31,22 @@ model_name = st.selectbox(
         "XGBoost"
     ]
 )
+st.subheader("📥 Download Sample Test Dataset")
 
-# --------------------------------------------------
-# Upload Test Data
-# --------------------------------------------------
+test_data_path = os.path.join("model", "test_data.csv")  # change if needed
+
+if os.path.exists(test_data_path):
+    with open(test_data_path, "rb") as file:
+        st.download_button(
+            label="Download test_data.csv",
+            data=file,
+            file_name="test_data.csv",
+            mime="text/csv"
+        )
+else:
+    st.warning("Sample test_data.csv not found in repository.")
+
+
 
 uploaded_file = st.file_uploader("Upload Test CSV File", type=["csv"])
 
@@ -56,9 +61,7 @@ if uploaded_file is not None:
     X = data.drop("income", axis=1)
     y = data["income"]
 
-    # --------------------------------------------------
-    # Load Model
-    # --------------------------------------------------
+   
 
     model_files = {
         "Logistic Regression": "Logistic Regression.pkl",
@@ -77,16 +80,12 @@ if uploaded_file is not None:
 
     model = joblib.load(model_path)
 
-    # --------------------------------------------------
-    # Predictions
-    # --------------------------------------------------
+   
 
     y_pred = model.predict(X)
     y_prob = model.predict_proba(X)[:, 1]
 
-    # --------------------------------------------------
-    # Display Metrics
-    # --------------------------------------------------
+    
 
     st.subheader("📊 Evaluation Metrics")
 
@@ -97,9 +96,7 @@ if uploaded_file is not None:
     st.write("F1 Score:", round(f1_score(y, y_pred), 4))
     st.write("MCC:", round(matthews_corrcoef(y, y_pred), 4))
 
-    # --------------------------------------------------
-    # Confusion Matrix
-    # --------------------------------------------------
+   
 
     st.subheader("🔢 Confusion Matrix")
 
@@ -123,10 +120,7 @@ if uploaded_file is not None:
 
     st.pyplot(fig)
 
-    # --------------------------------------------------
-    # Download Predictions
-    # --------------------------------------------------
-
+   
     result_df = data.copy()
     result_df["Predicted_Income"] = y_pred
     result_df["Prediction_Probability"] = y_prob
@@ -142,3 +136,4 @@ if uploaded_file is not None:
 
 else:
     st.info("Please select a model and upload a test dataset to view results.")
+
