@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import joblib
+import os
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -15,97 +16,102 @@ from sklearn.metrics import (
 )
 
 st.set_page_config(page_title="Adult Income Classification", layout="centered")
+
 st.title("Adult Income Classification App")
 
-# Model Selection
-model_name = st.selectbox(
-    "Select Model",
-    [
+st.markdown("### 📌 Model Performance Comparison (Training Data)")
+
+# -------------------------
+# Training Comparison Table
+# -------------------------
+
+comparison_data = {
+    "Model": [
         "Logistic Regression",
         "Decision Tree",
         "KNN",
         "Naive Bayes",
         "Random Forest",
         "XGBoost"
-    ]
+    ],
+    "Accuracy": [0.8178, 0.8034, 0.7618, 0.7824, 0.8478, 0.8667],
+    "AUC": [0.8447, 0.7418, 0.6529, 0.8155, 0.9063, 0.9214],
+    "Precision": [0.7182, 0.6017, 0.5365, 0.6410, 0.7916, 0.7766],
+    "Recall": [0.4400, 0.6193, 0.3087, 0.2833, 0.5267, 0.6513],
+    "F1 Score": [0.5457, 0.6104, 0.3919, 0.3930, 0.6325, 0.7085],
+    "MCC": [0.4605, 0.4791, 0.2721, 0.3190, 0.5593, 0.6270]
+}
+
+comparison_df = pd.DataFrame(comparison_data)
+st.dataframe(comparison_df, use_container_width=True)
+
+st.markdown("---")
+
+# -------------------------
+# Model Selection
+# -------------------------
+
+model_name = st.selectbox(
+    "Select Model for Testing",
+    comparison_data["Model"]
 )
 
-# File Upload
 uploaded_file = st.file_uploader("Upload Test CSV File", type=["csv"])
 
-# ================= METRICS =================
-st.subheader("Evaluation Metrics")
+st.markdown("### 📊 Evaluation Metrics (Test Data)")
 
-acc_p = st.empty()
-auc_p = st.empty()
-prec_p = st.empty()
-rec_p = st.empty()
-f1_p = st.empty()
-mcc_p = st.empty()
+# Show note before upload
+if uploaded_file is None:
+    st.info("⚠️ Please upload a test dataset to view evaluation metrics and confusion matrix.")
 
-# Default metric placeholders
-acc_p.write("Accuracy: -")
-auc_p.write("AUC: -")
-prec_p.write("Precision: -")
-rec_p.write("Recall: -")
-f1_p.write("F1 Score: -")
-mcc_p.write("MCC: -")
-
-# ================= CONFUSION MATRIX =================
-st.subheader("Confusion Matrix")
-
-cm_placeholder = st.empty()
-
-# Show EMPTY confusion matrix template initially
-fig, ax = plt.subplots(figsize=(5, 4))
-default_cm = [[0, 0], [0, 0]]
-
-sns.heatmap(
-    default_cm,
-    annot=True,
-    fmt="d",
-    cmap="Blues",
-    xticklabels=["<=50K", ">50K"],
-    yticklabels=["<=50K", ">50K"],
-    ax=ax
-)
-
-ax.set_xlabel("Predicted Label")
-ax.set_ylabel("Actual Label")
-ax.set_title("Confusion Matrix")
-
-cm_placeholder.pyplot(fig)
-
-# ================= AFTER FILE UPLOAD =================
-if uploaded_file is not None:
-
+else:
     data = pd.read_csv(uploaded_file)
 
     X = data.drop("income", axis=1)
     y = data["income"]
 
-    model = joblib.load(f"model/{model_name}.pkl")
+    # Model file mapping
+    model_files = {
+        "Logistic Regression": "Logistic Regression.pkl",
+        "Decision Tree": "Decision Tree.pkl",
+        "KNN": "KNN.pkl",
+        "Naive Bayes": "Naive Bayes.pkl",
+        "Random Forest": "Random Forest.pkl",
+        "XGBoost": "XGBoost.pkl"
+    }
+
+    model_path = os.path.join("model", model_files[model_name])
+    model = joblib.load(model_path)
 
     y_pred = model.predict(X)
     y_prob = model.predict_proba(X)[:, 1]
 
-    # Update metrics
-    acc_p.write(f"Accuracy: {round(accuracy_score(y, y_pred), 4)}")
-    auc_p.write(f"AUC: {round(roc_auc_score(y, y_prob), 4)}")
-    prec_p.write(f"Precision: {round(precision_score(y, y_pred), 4)}")
-    rec_p.write(f"Recall: {round(recall_score(y, y_pred), 4)}")
-    f1_p.write(f"F1 Score: {round(f1_score(y, y_pred), 4)}")
-    mcc_p.write(f"MCC: {round(matthews_corrcoef(y, y_pred), 4)}")
+    # -------------------------
+    # Display Metrics
+    # -------------------------
 
-    # Update confusion matrix
+    st.write("Accuracy:", round(accuracy_score(y, y_pred), 4))
+    st.write("AUC:", round(roc_auc_score(y, y_prob), 4))
+    st.write("Precision:", round(precision_score(y, y_pred), 4))
+    st.write("Recall:", round(recall_score(y, y_pred), 4))
+    st.write("F1 Score:", round(f1_score(y, y_pred), 4))
+    st.write("MCC:", round(matthews_corrcoef(y, y_pred), 4))
+
+    # -------------------------
+    # Confusion Matrix
+    # -------------------------
+
+    st.markdown("### 🔢 Confusion Matrix")
+
     cm = confusion_matrix(y, y_pred)
 
     fig, ax = plt.subplots(figsize=(5, 4))
+
     sns.heatmap(
         cm,
         annot=True,
-        fmt="d",
-        cmap="Blues",
+        fmt='d',
+        cmap='Blues',
         xticklabels=["<=50K", ">50K"],
         yticklabels=["<=50K", ">50K"],
         ax=ax
@@ -115,4 +121,4 @@ if uploaded_file is not None:
     ax.set_ylabel("Actual Label")
     ax.set_title("Confusion Matrix")
 
-    cm_placeholder.pyplot(fig)
+    st.pyplot(fig)
